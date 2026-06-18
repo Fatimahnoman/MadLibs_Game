@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProseCraft: Interactive Narrative Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono&display=swap');
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #0e0e0e;
+    }
+    .mono-font {
+      font-family: 'Space Mono', monospace;
+    }
+  </style>
+</head>
+<body class="text-white min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+  <!-- Glow Background Decorations -->
+  <div class="fixed top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-72 h-72 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <div class="w-full max-w-2xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl relative z-10">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold mb-3">
+        🎭 Interactive Word Game
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-purple-400 via-pink-500 to-purple-400 bg-clip-text text-transparent">
+        ProseCraft
+      </h1>
+      <p class="text-gray-400 text-sm mt-2">
+        Choose a template, fill in the blanks, and craft unique stories.
+      </p>
+    </div>
+
+    <!-- Step 1: Select Story -->
+    <div id="select-step" class="space-y-4">
+      <label class="block text-gray-300 text-sm font-medium">Select a Story Template:</label>
+      <select id="story-selector" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-300">
+        <option value="" class="bg-[#121212] text-gray-400">-- Click to choose --</option>
+        <option value="0" class="bg-[#121212] text-white">The Adventure</option>
+        <option value="1" class="bg-[#121212] text-white">The Restaurant</option>
+        <option value="2" class="bg-[#121212] text-white">The Dream</option>
+        <option value="3" class="bg-[#121212] text-white">The Superhero</option>
+        <option value="4" class="bg-[#121212] text-white">The Time Machine</option>
+      </select>
+
+      <button id="random-btn" class="w-full mt-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-semibold py-3 rounded-xl transition duration-300">
+        🎲 Select Random Story
+      </button>
+    </div>
+
+    <!-- Step 2: Inputs (Hidden Initially) -->
+    <div id="inputs-step" class="hidden mt-6 space-y-6">
+      <h3 id="story-title" class="text-xl font-bold text-purple-400 border-b border-white/10 pb-2"></h3>
+      
+      <div id="inputs-container" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+        <!-- Dynamically Generated Inputs Go Here -->
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 pt-4">
+        <button id="generate-btn" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-300">
+          ✨ Generate Story!
+        </button>
+        <button id="reset-btn" class="bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/10 text-gray-300 font-semibold px-6 py-3.5 rounded-xl transition duration-300">
+          Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Popup for Story Output -->
+  <div id="story-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0c0c0c] border border-white/10 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+      <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+        <h3 id="modal-title" class="font-bold text-lg text-purple-400"></h3>
+        <button id="close-modal-btn" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+      <div class="p-6">
+        <p id="modal-content" class="text-gray-300 leading-relaxed text-base bg-white/5 p-4 rounded-xl border border-white/5 whitespace-pre-wrap"></p>
+      </div>
+      <div class="px-6 py-4 border-t border-white/10 flex flex-wrap justify-end gap-2 bg-white/5">
+        <button id="play-again-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition duration-300">Play Again</button>
+        <button id="copy-btn" class="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 px-5 py-2 rounded-xl text-sm font-semibold transition duration-300">Copy Story</button>
+        <button id="close-modal-bottom-btn" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-5 py-2 rounded-xl text-sm font-semibold transition duration-300">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const stories = [
+      {
+        title: "The Adventure",
+        template: "Yesterday, I went to the {place} with my {adjective} {noun}. We {verb}ed all day long! Then we saw a {animal} wearing {clothing}. It was so {emotion} that we {verb2}ed all the way home.",
+        words: ["place", "adjective", "noun", "verb", "animal", "clothing", "emotion", "verb2"]
+      },
+      {
+        title: "The Restaurant",
+        template: "I went to a {adjective} restaurant called '{name}'. The waiter was a {animal} who served me {food} on a {noun}. I {verb}ed so much that I became {emotion} and had to {verb2} out of there!",
+        words: ["adjective", "name", "animal", "food", "noun", "verb", "emotion", "verb2"]
+      },
+      {
+        title: "The Dream",
+        template: "Last night I dreamed I was a {adjective} {noun} who could {verb}. I flew to {place} where I met a {animal} who gave me {food}. We {verb2}ed together until I woke up feeling {emotion}.",
+        words: ["adjective", "noun", "verb", "place", "animal", "food", "verb2", "emotion"]
+      },
+      {
+        title: "The Superhero",
+        template: "My superhero name is {name} Man/Woman! I have the power to {verb} {noun}s faster than a {animal}. I wear a {adjective} {clothing} and when I get {emotion}, I {verb2} all the way to {place}.",
+        words: ["name", "verb", "noun", "animal", "adjective", "clothing", "emotion", "verb2", "place"]
+      },
+      {
+        title: "The Time Machine",
+        template: "I built a time machine out of a {adjective} {noun}! When I {verb}ed it, I went to {place} where {animal}s rule the world. They served me {food} and made me wear {clothing}. I felt so {emotion} that I {verb2}ed back home immediately.",
+        words: ["adjective", "noun", "verb", "place", "animal", "food", "clothing", "emotion", "verb2"]
+      }
+    ];
+
+    const examples = {
+      adjective: "(e.g., happy, blue, strange)",
+      noun: "(e.g., cat, house, car)",
+      verb: "(e.g., run, jump, sing)",
+      place: "(e.g., park, moon, school)",
+      animal: "(e.g., dog, elephant, bird)",
+      food: "(e.g., pizza, apple, cake)",
+      clothing: "(e.g., hat, shoes, dress)",
+      emotion: "(e.g., happy, scared, excited)",
+      name: "(e.g., Bob, Super, Captain)",
+      verb2: "(e.g., dance, walk, fly)"
+    };
+
+    let selectedStory = null;
+
+    const selectStep = document.getElementById("select-step");
+    const inputsStep = document.getElementById("inputs-step");
+    const storySelector = document.getElementById("story-selector");
+    const randomBtn = document.getElementById("random-btn");
+    const storyTitle = document.getElementById("story-title");
+    const inputsContainer = document.getElementById("inputs-container");
+    const generateBtn = document.getElementById("generate-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    
+    const storyModal = document.getElementById("story-modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalContent = document.getElementById("modal-content");
+    const closeModalBtn = document.getElementById("close-modal-btn");
+    const closeModalBottomBtn = document.getElementById("close-modal-bottom-btn");
+    const playAgainBtn = document.getElementById("play-again-btn");
+    const copyBtn = document.getElementById("copy-btn");
+
+    storySelector.addEventListener("change", (e) => {
+      if (e.target.value !== "") {
+        loadStory(parseInt(e.target.value));
+      }
+    });
+
+    randomBtn.addEventListener("click", () => {
+      const randomIndex = Math.floor(Math.random() * stories.length);
+      storySelector.value = randomIndex;
+      loadStory(randomIndex);
+    });
+
+    function loadStory(index) {
+      selectedStory = stories[index];
+      storyTitle.textContent = `Enter words for "${selectedStory.title}":`;
+      inputsContainer.innerHTML = "";
+
+      selectedStory.words.forEach(word => {
+        const div = document.createElement("div");
+        div.className = "flex flex-col sm:flex-row sm:items-center gap-2";
+        
+        const label = document.createElement("label");
+        label.className = "w-full sm:w-1/3 text-sm text-gray-300 capitalize";
+        label.textContent = `Enter a ${word}:`;
+
+        const inputWrapper = document.createElement("div");
+        inputWrapper.className = "flex-1 flex flex-col gap-1";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.dataset.wordType = word;
+        input.required = true;
+        input.className = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-200 text-sm";
+        input.placeholder = examples[word] || "";
+
+        inputWrapper.appendChild(input);
+        div.appendChild(label);
+        div.appendChild(inputWrapper);
+        inputsContainer.appendChild(div);
+      });
+
+      inputsStep.classList.remove("hidden");
+    }
+
+    generateBtn.addEventListener("click", () => {
+      const inputs = inputsContainer.querySelectorAll("input");
+      const values = {};
+      let hasEmpty = false;
+
+      inputs.forEach(input => {
+        const val = input.value.trim();
+        if (!val) {
+          input.classList.add("border-red-500");
+          hasEmpty = true;
+        } else {
+          input.classList.remove("border-red-500");
+          values[input.dataset.wordType] = val;
+        }
+      });
+
+      if (hasEmpty) {
+        alert("Please fill in all blanks!");
+        return;
+      }
+
+      // format the story
+      let finalStory = selectedStory.template;
+      for (const [key, value] of Object.entries(values)) {
+        finalStory = finalStory.replace(`{${key}}`, value);
+      }
+
+      modalTitle.textContent = selectedStory.title;
+      modalContent.textContent = finalStory;
+      storyModal.classList.remove("hidden");
+    });
+
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(modalContent.textContent).then(() => {
+        alert("Story copied to clipboard! 📋");
+      });
+    });
+
+    function reset() {
+      selectedStory = null;
+      storySelector.value = "";
+      inputsStep.classList.add("hidden");
+      inputsContainer.innerHTML = "";
+    }
+
+    resetBtn.addEventListener("click", reset);
+    playAgainBtn.addEventListener("click", () => {
+      storyModal.classList.add("hidden");
+      reset();
+    });
+
+    const hideModal = () => storyModal.classList.add("hidden");
+    closeModalBtn.addEventListener("click", hideModal);
+    closeModalBottomBtn.addEventListener("click", hideModal);
+  </script>
+</body>
+</html>
